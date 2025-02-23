@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Comparison</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        html {
+            scroll-behavior: smooth;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Navbar -->
+    <nav class="bg-blue-600 p-4 text-white fixed w-full">
+        <div class="container mx-auto flex justify-between">
+            <a href="#" class="text-xl font-bold">CompareIt</a>
+            <div>
+                <a href="#features" class="px-4">Features</a>
+                <a href="#pricing" class="px-4">Pricing</a>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Hero Section -->
+    <section class="h-screen flex items-center justify-center text-center p-10">
+        <div>
+            <h1 class="text-4xl font-bold">Compare Products with Ease</h1>
+            <p class="text-lg mt-4">Find the best deals, compare prices, and check reviews in one place.</p>
+        </div>
+    </section>
+    
+    <!-- Features Section -->
+    <section id="features" class="p-10 bg-white">
+        <h2 class="text-2xl font-bold text-center mb-6">Features</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+            <div class="p-6 bg-gray-200 rounded-lg">
+                <h3 class="font-bold">Price Comparison</h3>
+                <p>Compare prices across multiple e-commerce platforms.</p>
+            </div>
+            <div class="p-6 bg-gray-200 rounded-lg">
+                <h3 class="font-bold">User Reviews</h3>
+                <p>See what others are saying before making a purchase.</p>
+            </div>
+            <div class="p-6 bg-gray-200 rounded-lg">
+                <h3 class="font-bold">Feature Analysis</h3>
+                <p>Analyze product specifications side by side.</p>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Pricing Section -->
+    <section id="pricing" class="p-10 bg-gray-100">
+        <h2 class="text-2xl font-bold text-center mb-6">Pricing</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 text-center">
+            <div class="p-6 bg-white rounded-lg shadow">
+                <h3 class="font-bold">Basic</h3>
+                <p class="text-xl font-semibold">Free</p>
+                <p>Compare up to 3 products</p>
+            </div>
+            <div class="p-6 bg-white rounded-lg shadow">
+                <h3 class="font-bold">Pro</h3>
+                <p class="text-xl font-semibold">$9.99/month</p>
+                <p>Compare unlimited products</p>
+            </div>
+            <div class="p-6 bg-white rounded-lg shadow">
+                <h3 class="font-bold">Enterprise</h3>
+                <p class="text-xl font-semibold">Contact Us</p>
+                <p>Advanced analytics & integrations</p>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Smooth Scroll Script -->
+    <script>
+        document.querySelectorAll('nav a').forEach(anchor => {
+            anchor.addEventListener('click', function(event) {
+                event.preventDefault();
+                const targetId = this.getAttribute('href').substring(1);
+                document.getElementById(targetId).scrollIntoView({ behavior: 'smooth' });
+            });
+        });
+    </script>
+</body>
+</html>
