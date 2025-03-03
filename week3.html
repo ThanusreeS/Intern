@@ -1,0 +1,144 @@
+import os
+import tensorflow as tf
+from tensorflow.keras import layers, models, regularizers
+import numpy as np
+import cv2
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
+import time
+from collections import deque
+import scipy
+
+# Define paths
+DATASET_PATH = "C:/Users/Lenovo/Desktop/final yearProject"
+MODEL_PATH = os.path.join(DATASET_PATH, "stress_model_gru.h5")
+NON_STRESS_PATH = os.path.join(DATASET_PATH, "FINALTFEID_NONSTRESS")
+STRESS_PATH = os.path.join(DATASET_PATH, "FINALFEID_STRESS")
+
+# Check dataset path
+if not os.path.exists(DATASET_PATH):
+    raise FileNotFoundError(f"Dataset directory not found: {DATASET_PATH}")
+
+# Check dataset balance
+def check_dataset_balance():
+    non_stress_count = len(os.listdir(NON_STRESS_PATH))
+    stress_count = len(os.listdir(STRESS_PATH))
+    print(f'Non-Stress Images: {non_stress_count}, Stress Images: {stress_count}')
+
+check_dataset_balance()
+
+# Create dataset sequences
+def load_and_preprocess_images(folder, img_size=(128, 128)):
+    images = []
+    filenames = sorted(os.listdir(folder))
+    for filename in filenames:
+        img_path = os.path.join(folder, filename)
+        img = cv2.imread(img_path)
+        img = cv2.resize(img, img_size)
+        img = img / 255.0
+        images.append(img)
+    return np.array(images)
+
+def create_sequence_data(time_steps=5):
+    non_stress_images = load_and_preprocess_images(NON_STRESS_PATH)
+    stress_images = load_and_preprocess_images(STRESS_PATH)
+    
+    X, y = [], []
+    
+    for i in range(len(non_stress_images) - time_steps):
+        X.append(non_stress_images[i:i+time_steps])
+        y.append(0)
+    for i in range(len(stress_images) - time_steps):
+        X.append(stress_images[i:i+time_steps])
+        y.append(1)
+    
+    X = np.array(X)
+    y = np.array(y)
+    return X, y
+
+# Load dataset
+X, y = create_sequence_data()
+
+# Split into training and validation sets
+from sklearn.model_selection import train_test_split
+X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Define CNN-GRU model
+def create_cnn_gru_model(input_shape=(5, 128, 128, 3), num_classes=2):
+    base_model = tf.keras.applications.VGG16(weights='imagenet', include_top=False, input_shape=(128, 128, 3))
+    base_model.trainable = False
+    
+    model = models.Sequential([
+        layers.TimeDistributed(base_model, input_shape=input_shape),
+        layers.TimeDistributed(layers.Flatten()),
+        layers.GRU(64, return_sequences=True),
+        layers.GRU(32),
+        layers.Dense(64, activation='relu'),
+        layers.Dropout(0.5),
+        layers.Dense(num_classes, activation='softmax')
+    ])
+    
+    return model
+
+# Load or train model
+if os.path.exists(MODEL_PATH):
+    model = tf.keras.models.load_model(MODEL_PATH)
+else:
+    model = create_cnn_gru_model()
+    model.compile(optimizer=tf.keras.optimizers.Adam(1e-4),
+                  loss='sparse_categorical_crossentropy',
+                  metrics=['accuracy'])
+    callbacks = [
+        EarlyStopping(monitor='val_loss', patience=8, restore_best_weights=True),
+        ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=4, min_lr=1e-7)
+    ]
+    history = model.fit(X_train, y_train, validation_data=(X_val, y_val), epochs=50, callbacks=callbacks)
+    model.save(MODEL_PATH)
+
+    # Plot training history
+    import matplotlib.pyplot as plt
+    plt.plot(history.history['accuracy'], label='Training Accuracy')
+    plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+    plt.legend()
+    plt.show()
+
+# Debugging execution time
+start_time = time.time()
+
+def real_time_prediction(time_steps=5):
+    cap = cv2.VideoCapture(0)
+    class_names = ['Non-Stress', 'Stress']
+    frame_queue = deque(maxlen=time_steps)
+    
+    while (time.time() - start_time) < 60:  # Run for 1 minute
+        ret, frame = cap.read()
+        if not ret:
+            break
+        
+        img = cv2.resize(frame, (128, 128))
+        frame_queue.append(img / 255.0)
+        
+        if len(frame_queue) == time_steps:
+            img_array = np.array(frame_queue)
+            img_array = np.expand_dims(img_array, axis=0)  # Reshape for model input
+            
+            predictions = model.predict(img_array)
+            predicted_class = class_names[np.argmax(predictions[0])]
+            confidence = np.max(predictions[0])
+            
+            print(f'Predicted: {predicted_class} (Confidence: {confidence:.2f})')
+            
+            cv2.putText(frame, f'{predicted_class}: {confidence:.2f}', (10, 50),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            
+        cv2.imshow('Real-Time Stress Detection', frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+    
+    cap.release()
+    cv2.destroyAllWindows()
+
+real_time_prediction()
+
+end_time = time.time()
+execution_time = end_time - start_time
+print(f"Total Execution Time: {execution_time:.2f} seconds")
